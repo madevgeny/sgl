@@ -28,13 +28,13 @@ func (s LogMode) String() string {
 	return LogLevelsNames[s]
 }
 
-type LogMsg struct {
+type logMsg struct {
 	Level LogMode
 
 	Msg string
 }
 
-var logChannel chan *LogMsg = make(chan *LogMsg, 1024)
+var logChannel chan *logMsg = make(chan *logMsg, 1024)
 
 var onceErrors map[string]bool = make(map[string]bool)
 
@@ -71,7 +71,7 @@ func log_func(level LogMode, format string, a ...interface{}) {
 		return
 	}
 
-	m := LogMsg{Level: level}
+	m := logMsg{Level: level}
 
 	m.Msg = fmt.Sprintf(format, a...)
 
