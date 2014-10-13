@@ -17,7 +17,7 @@ const (
 	LOG_ERROR_ONCE
 )
 
-var LogLevelsNames = [...]string{
+var logLevelsNames = [...]string{
 	"DEBUG",
 	"INFO",
 	"WARNING",
@@ -26,7 +26,7 @@ var LogLevelsNames = [...]string{
 }
 
 func (s LogMode) String() string {
-	return LogLevelsNames[s]
+	return logLevelsNames[s]
 }
 
 type logMsg struct {
