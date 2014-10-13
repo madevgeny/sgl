@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -55,6 +56,27 @@ func log_worker() {
 				m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
 				m.Level, m.Msg))
 			logFile.Sync()
+
+			fi, err := logFile.Stat()
+			if err != nil {
+				continue
+			}
+
+			if fi.Size() > int64(maxLogSize) {
+				logFile.Close()
+				os.Rename(logFileName, logFileName+"."+strconv.Itoa(currentLogIndex))
+				currentLogIndex++
+				if currentLogIndex > nLogs {
+					currentLogIndex = 1
+				}
+
+				logFile, err = os.OpenFile(logFileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
+				if err != nil {
+					log.Fatalf("Can't open log file '%s'.\n", logFileName)
+				}
+
+				onceErrors = make(map[string]bool)
+			}
 		} else {
 			logFile.Close()
 		}
@@ -72,16 +94,25 @@ func log_func(level LogMode, format string, a ...interface{}) {
 }
 
 var logFile *os.File
+var logFileName string
 var minLogLevel LogMode
 
-func Init(logFileName string, minLevel LogMode) {
-	f, err := os.OpenFile(logFileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
+var maxLogSize int
+var nLogs int
+var currentLogIndex int
+
+func Init(fileName string, minLevel LogMode, maxSize int, n int) {
+	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		log.Fatalf("Can't open log file '%s'.\n", logFileName)
+		log.Fatalf("Can't open log file '%s'.\n", fileName)
 	}
 	logFile = f
 
+	logFileName = fileName
 	minLogLevel = minLevel
+	maxLogSize = maxSize
+	nLogs = n
+	currentLogIndex = 1
 
 	go log_worker()
 }
