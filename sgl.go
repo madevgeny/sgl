@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 type LogMode int
@@ -30,24 +31,13 @@ func (s LogMode) String() string {
 
 type logMsg struct {
 	Level LogMode
-
-	Msg string
+	Time  time.Time
+	Msg   string
 }
 
 var logChannel chan *logMsg = make(chan *logMsg, 1024)
 
 var onceErrors map[string]bool = make(map[string]bool)
-
-func StringToLogLevel(ll string) LogMode {
-	res := LOG_DEBUG
-	for _, i := range LogLevelsNames {
-		if ll == i[:len(i)-1] {
-			return res
-		}
-		res++
-	}
-	return res
-}
 
 func log_worker() {
 	for m := range logChannel {
@@ -59,7 +49,9 @@ func log_worker() {
 					onceErrors[m.Msg] = true
 				}
 			}
-			log.Println(m.Level, m.Msg)
+
+			logFile.WriteString(fmt.Sprintf("%s | %s | %s\n", m.Time, m.Level, m.Msg))
+			logFile.Sync()
 		} else {
 			logFile.Close()
 		}
@@ -71,27 +63,20 @@ func log_func(level LogMode, format string, a ...interface{}) {
 		return
 	}
 
-	m := logMsg{Level: level}
-
-	m.Msg = fmt.Sprintf(format, a...)
+	m := logMsg{Level: level, Time: time.Now(), Msg: fmt.Sprintf(format, a...)}
 
 	logChannel <- &m
 }
 
-var logFile os.File
+var logFile *os.File
 var minLogLevel LogMode
 
-func Init(logFileName string, flags int, minLevel LogMode) {
-	if logFileName != "" {
-		logFile, err := os.OpenFile(logFileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
-		if err != nil {
-			fmt.Printf("Can't open log file '%s'.\n", logFileName)
-		} else {
-			log.SetOutput(logFile)
-		}
+func Init(logFileName string, minLevel LogMode) {
+	f, err := os.OpenFile(logFileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		log.Fatalf("Can't open log file '%s'.\n", logFileName)
 	}
-
-	log.SetFlags(flags)
+	logFile = f
 
 	minLogLevel = minLevel
 
