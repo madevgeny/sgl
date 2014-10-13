@@ -50,7 +50,10 @@ func log_worker() {
 				}
 			}
 
-			logFile.WriteString(fmt.Sprintf("%s | %s | %s\n", m.Time, m.Level, m.Msg))
+			logFile.WriteString(fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
+				m.Time.Day(), m.Time.Month(), m.Time.Year(),
+				m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
+				m.Level, m.Msg))
 			logFile.Sync()
 		} else {
 			logFile.Close()
