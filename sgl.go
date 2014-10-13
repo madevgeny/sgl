@@ -36,12 +36,13 @@ type logMsg struct {
 	Msg   string
 }
 
-var logChannel chan *logMsg = make(chan *logMsg, 1024)
+var logChannel chan *logMsg = make(chan *logMsg, 0)
 
 var onceErrors map[string]bool = make(map[string]bool)
 
 func log_worker() {
-	for m := range logChannel {
+	for {
+		m, _ := <-logChannel
 		if m != nil {
 			if m.Level == LOG_ERROR_ONCE {
 				if _, ok := onceErrors[m.Msg]; ok {
@@ -51,10 +52,11 @@ func log_worker() {
 				}
 			}
 
-			logFile.WriteString(fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
+			msg := fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
 				m.Time.Day(), m.Time.Month(), m.Time.Year(),
 				m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
-				m.Level, m.Msg))
+				m.Level, m.Msg)
+			logFile.WriteString(msg)
 			logFile.Sync()
 
 			fi, err := logFile.Stat()
