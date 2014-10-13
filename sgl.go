@@ -26,6 +26,17 @@ var logLevelsNames = [...]string{
 	"ERROR_ONCE",
 }
 
+func StringToLogLevel(ll string) LogMode {
+	res := LOG_DEBUG
+	for _, i := range logLevelsNames {
+		if ll == i {
+			return res
+		}
+		res++
+	}
+	return res
+}
+
 func (s LogMode) String() string {
 	return logLevelsNames[s]
 }
