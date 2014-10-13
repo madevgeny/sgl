@@ -18,11 +18,11 @@ const (
 )
 
 var LogLevelsNames = [...]string{
-	"DEBUG:",
-	"INFO:",
-	"WARNING:",
-	"ERROR:",
-	"ERROR_ONCE:",
+	"DEBUG",
+	"INFO",
+	"WARNING",
+	"ERROR",
+	"ERROR_ONCE",
 }
 
 func (s LogMode) String() string {
