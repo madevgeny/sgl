@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"runtime"
 	"strconv"
 	"time"
@@ -82,7 +83,7 @@ func log_worker() {
 				msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s:%d | %s | %s\n",
 					m.Time.Day(), m.Time.Month(), m.Time.Year(),
 					m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
-					m.File, m.Line,
+					path.Base(m.File), m.Line,
 					m.Level, m.Msg)
 			}
 			logFile.WriteString(msg)
@@ -121,7 +122,7 @@ func log_func(level LogMode, format string, a ...interface{}) {
 
 	m := logMsg{Level: level, Time: time.Now(), Msg: fmt.Sprintf(format, a...)}
 	if enabledFileLine {
-		_, f, l, _ := runtime.Caller(-2)
+		_, f, l, _ := runtime.Caller(2)
 		m.File = f
 		m.Line = l
 	}
