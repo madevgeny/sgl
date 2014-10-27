@@ -4,8 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
+)
+
+type Flags int
+
+const (
+	SHOW_FILE_LINE Flags = 1 << 0
 )
 
 type LogMode int
@@ -45,6 +52,8 @@ type logMsg struct {
 	Level LogMode
 	Time  time.Time
 	Msg   string
+	File  string
+	Line  int
 }
 
 var logChannel chan *logMsg = make(chan *logMsg, 0)
@@ -63,10 +72,19 @@ func log_worker() {
 				}
 			}
 
-			msg := fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
-				m.Time.Day(), m.Time.Month(), m.Time.Year(),
-				m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
-				m.Level, m.Msg)
+			var msg string
+			if !enabledFileLine {
+				msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
+					m.Time.Day(), m.Time.Month(), m.Time.Year(),
+					m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
+					m.Level, m.Msg)
+			} else {
+				msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s:%d | %s | %s\n",
+					m.Time.Day(), m.Time.Month(), m.Time.Year(),
+					m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
+					m.File, m.Line,
+					m.Level, m.Msg)
+			}
 			logFile.WriteString(msg)
 			logFile.Sync()
 
@@ -102,6 +120,11 @@ func log_func(level LogMode, format string, a ...interface{}) {
 	}
 
 	m := logMsg{Level: level, Time: time.Now(), Msg: fmt.Sprintf(format, a...)}
+	if enabledFileLine {
+		_, f, l, _ := runtime.Caller(-2)
+		m.File = f
+		m.Line = l
+	}
 
 	logChannel <- &m
 }
@@ -114,7 +137,9 @@ var maxLogSize int
 var nLogs int
 var currentLogIndex int
 
-func Init(fileName string, minLevel LogMode, maxSize int, n int) {
+var enabledFileLine bool
+
+func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
 	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Fatalf("Can't open log file '%s'.\n", fileName)
@@ -126,6 +151,8 @@ func Init(fileName string, minLevel LogMode, maxSize int, n int) {
 	maxLogSize = maxSize
 	nLogs = n
 	currentLogIndex = 1
+
+	enabledFileLine = (flags & SHOW_FILE_LINE) != 0
 
 	go log_worker()
 }
