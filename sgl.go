@@ -11,11 +11,11 @@ import (
 type LogMode int
 
 const (
-	LOG_DEBUG LogMode = iota
-	LOG_INFO
-	LOG_WARNING
-	LOG_ERROR
-	LOG_ERROR_ONCE
+	DEBUG LogMode = iota
+	INFO
+	WARNING
+	ERROR
+	ERROR_ONCE
 )
 
 var logLevelsNames = [...]string{
@@ -27,7 +27,7 @@ var logLevelsNames = [...]string{
 }
 
 func StringToLogLevel(ll string) LogMode {
-	res := LOG_DEBUG
+	res := DEBUG
 	for _, i := range logLevelsNames {
 		if ll == i {
 			return res
@@ -55,7 +55,7 @@ func log_worker() {
 	for {
 		m, _ := <-logChannel
 		if m != nil {
-			if m.Level == LOG_ERROR_ONCE {
+			if m.Level == ERROR_ONCE {
 				if _, ok := onceErrors[m.Msg]; ok {
 					continue
 				} else {
@@ -135,21 +135,21 @@ func Deinit() {
 }
 
 func Debug(format string, a ...interface{}) {
-	log_func(LOG_DEBUG, format, a...)
+	log_func(DEBUG, format, a...)
 }
 
 func Info(format string, a ...interface{}) {
-	log_func(LOG_INFO, format, a...)
+	log_func(INFO, format, a...)
 }
 
 func Warning(format string, a ...interface{}) {
-	log_func(LOG_WARNING, format, a...)
+	log_func(WARNING, format, a...)
 }
 
 func Error(format string, a ...interface{}) {
-	log_func(LOG_ERROR, format, a...)
+	log_func(ERROR, format, a...)
 }
 
 func ErrorOnce(format string, a ...interface{}) {
-	log_func(LOG_ERROR_ONCE, format, a...)
+	log_func(ERROR_ONCE, format, a...)
 }
