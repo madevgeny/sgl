@@ -2,7 +2,6 @@ package sgl
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"runtime"
@@ -104,7 +103,7 @@ func log_worker() {
 
 				logFile, err = os.OpenFile(logFileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 				if err != nil {
-					log.Fatalf("Can't open log file '%s'.\n", logFileName)
+					panic(fmt.Sprintf("Can't open log file '%s'.\n", logFileName))
 				}
 
 				onceErrors = make(map[string]bool)
@@ -143,7 +142,7 @@ var enabledFileLine bool
 func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
 	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		log.Fatalf("Can't open log file '%s'.\n", fileName)
+		panic(fmt.Sprintf("Can't open log file '%s'.\n", fileName))
 	}
 	logFile = f
 
