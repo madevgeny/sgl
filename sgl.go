@@ -12,7 +12,8 @@ import (
 type Flags int
 
 const (
-	SHOW_FILE_LINE Flags = 1 << 0
+	SHOW_FILE_LINE  Flags = 1 << 0
+	PRINT_TO_STDOUT       = 1 << 1
 )
 
 type LogMode int
@@ -85,6 +86,9 @@ func log_worker() {
 					path.Base(m.File), m.Line,
 					m.Level, m.Msg)
 			}
+			if printToStdOut {
+				fmt.Print(msg)
+			}
 			logFile.WriteString(msg)
 			logFile.Sync()
 
@@ -138,6 +142,7 @@ var nLogs int
 var currentLogIndex int
 
 var enabledFileLine bool
+var printToStdOut bool
 
 func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
 	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
@@ -153,7 +158,7 @@ func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
 	currentLogIndex = 1
 
 	enabledFileLine = (flags & SHOW_FILE_LINE) != 0
-
+	printToStdOut = (flags & PRINT_TO_STDOUT) != 0
 	go log_worker()
 }
 
