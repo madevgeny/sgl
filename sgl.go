@@ -12,8 +12,9 @@ import (
 type Flags int
 
 const (
-	SHOW_FILE_LINE  Flags = 1 << 0
-	PRINT_TO_STDOUT       = 1 << 1
+	SHOW_FILE_LINE   Flags = 1 << 0
+	PRINT_TO_STDOUT        = 1 << 1
+	BUFFERED_LOGGING       = 1 << 2
 )
 
 type LogMode int
@@ -57,13 +58,13 @@ type logMsg struct {
 	Line  int
 }
 
-var logChannel chan *logMsg = make(chan *logMsg, 0)
+var logChannel chan *logMsg
 
 var onceErrors map[string]bool = make(map[string]bool)
 
 func log_worker() {
 	for {
-		m, _ := <-logChannel
+		m := <-logChannel
 		if m != nil {
 			if m.Level == ERROR_ONCE {
 				if _, ok := onceErrors[m.Msg]; ok {
@@ -143,8 +144,19 @@ var currentLogIndex int
 
 var enabledFileLine bool
 var printToStdOut bool
+var bufferedLogging bool
 
 func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
+	enabledFileLine = (flags & SHOW_FILE_LINE) != 0
+	printToStdOut = (flags & PRINT_TO_STDOUT) != 0
+	bufferedLogging = (flags & BUFFERED_LOGGING) != 0
+
+	if !bufferedLogging {
+		logChannel = make(chan *logMsg, 0)
+	} else {
+		logChannel = make(chan *logMsg, 1024)
+	}
+
 	f, err := os.OpenFile(fileName, os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		panic(fmt.Sprintf("Can't open log file '%s'.\n", fileName))
@@ -157,8 +169,6 @@ func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
 	nLogs = n
 	currentLogIndex = 1
 
-	enabledFileLine = (flags & SHOW_FILE_LINE) != 0
-	printToStdOut = (flags & PRINT_TO_STDOUT) != 0
 	go log_worker()
 }
 
