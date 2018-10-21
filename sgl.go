@@ -66,12 +66,12 @@ var onceErrors = make(map[string]bool)
 func logWriter(m *logMsg) string {
 	var msg string
 	if !enabledFileLine {
-		msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
+		msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%.3f | %s | %s\n",
 			m.Time.Day(), m.Time.Month(), m.Time.Year(),
 			m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
 			m.Level, m.Msg)
 	} else {
-		msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s:%d | %s | %s\n",
+		msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%.3f | %s:%d | %s | %s\n",
 			m.Time.Day(), m.Time.Month(), m.Time.Year(),
 			m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
 			path.Base(m.File), m.Line,
