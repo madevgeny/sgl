@@ -12,19 +12,20 @@ import (
 type Flags int
 
 const (
-	SHOW_FILE_LINE   Flags = 1 << 0
-	PRINT_TO_STDOUT        = 1 << 1
-	BUFFERED_LOGGING       = 1 << 2
+	ShowFileLine    Flags = 1 << 0
+	PrintToStdout         = 1 << 1
+	BufferedLogging       = 1 << 2
 )
 
-type LogMode int
+type logMode int
 
 const (
-	DEBUG LogMode = iota
-	INFO
-	WARNING
-	ERROR
-	ERROR_ONCE
+	DebugLevel logMode = iota
+	InfoLevel
+	WarningLevel
+	ErrorLevel
+	ErrorOnceLevel
+	PanicLevel
 )
 
 var logLevelsNames = [...]string{
@@ -35,8 +36,8 @@ var logLevelsNames = [...]string{
 	"ERROR_ONCE",
 }
 
-func StringToLogLevel(ll string) LogMode {
-	res := DEBUG
+func stringToLogLevel(ll string) logMode {
+	res := DebugLevel
 	for _, i := range logLevelsNames {
 		if ll == i {
 			return res
@@ -46,12 +47,12 @@ func StringToLogLevel(ll string) LogMode {
 	return res
 }
 
-func (s LogMode) String() string {
+func (s logMode) String() string {
 	return logLevelsNames[s]
 }
 
 type logMsg struct {
-	Level LogMode
+	Level logMode
 	Time  time.Time
 	Msg   string
 	File  string
@@ -60,13 +61,36 @@ type logMsg struct {
 
 var logChannel chan *logMsg
 
-var onceErrors map[string]bool = make(map[string]bool)
+var onceErrors = make(map[string]bool)
 
-func log_worker() {
+func logWriter(m *logMsg) string {
+	var msg string
+	if !enabledFileLine {
+		msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
+			m.Time.Day(), m.Time.Month(), m.Time.Year(),
+			m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
+			m.Level, m.Msg)
+	} else {
+		msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s:%d | %s | %s\n",
+			m.Time.Day(), m.Time.Month(), m.Time.Year(),
+			m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
+			path.Base(m.File), m.Line,
+			m.Level, m.Msg)
+	}
+	if printToStdOut {
+		fmt.Print(msg)
+	}
+	logFile.WriteString(msg)
+	logFile.Sync()
+
+	return msg
+}
+
+func logWorker() {
 	for {
 		m := <-logChannel
 		if m != nil {
-			if m.Level == ERROR_ONCE {
+			if m.Level == ErrorOnceLevel {
 				if _, ok := onceErrors[m.Msg]; ok {
 					continue
 				} else {
@@ -74,24 +98,7 @@ func log_worker() {
 				}
 			}
 
-			var msg string
-			if !enabledFileLine {
-				msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s | %s\n",
-					m.Time.Day(), m.Time.Month(), m.Time.Year(),
-					m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
-					m.Level, m.Msg)
-			} else {
-				msg = fmt.Sprintf("%02d-%02d-%04d | %02d:%02d:%06g | %s:%d | %s | %s\n",
-					m.Time.Day(), m.Time.Month(), m.Time.Year(),
-					m.Time.Hour(), m.Time.Minute(), float32(m.Time.Second())+float32(m.Time.Nanosecond())/(1000000.0*1000.0),
-					path.Base(m.File), m.Line,
-					m.Level, m.Msg)
-			}
-			if printToStdOut {
-				fmt.Print(msg)
-			}
-			logFile.WriteString(msg)
-			logFile.Sync()
+			logWriter(m)
 
 			fi, err := logFile.Stat()
 			if err != nil {
@@ -119,7 +126,7 @@ func log_worker() {
 	}
 }
 
-func log_func(level LogMode, format string, a ...interface{}) {
+func logFunc(level logMode, format string, a ...interface{}) {
 	if level < minLogLevel {
 		return
 	}
@@ -136,7 +143,7 @@ func log_func(level LogMode, format string, a ...interface{}) {
 
 var logFile *os.File
 var logFileName string
-var minLogLevel LogMode
+var minLogLevel logMode
 
 var maxLogSize int
 var nLogs int
@@ -146,10 +153,10 @@ var enabledFileLine bool
 var printToStdOut bool
 var bufferedLogging bool
 
-func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
-	enabledFileLine = (flags & SHOW_FILE_LINE) != 0
-	printToStdOut = (flags & PRINT_TO_STDOUT) != 0
-	bufferedLogging = (flags & BUFFERED_LOGGING) != 0
+func Init(fileName string, minLevel logMode, maxSize int, n int, flags Flags) {
+	enabledFileLine = (flags & ShowFileLine) != 0
+	printToStdOut = (flags & PrintToStdout) != 0
+	bufferedLogging = (flags & BufferedLogging) != 0
 
 	if !bufferedLogging {
 		logChannel = make(chan *logMsg, 0)
@@ -169,7 +176,7 @@ func Init(fileName string, minLevel LogMode, maxSize int, n int, flags Flags) {
 	nLogs = n
 	currentLogIndex = 1
 
-	go log_worker()
+	go logWorker()
 }
 
 func Deinit() {
@@ -177,21 +184,32 @@ func Deinit() {
 }
 
 func Debug(format string, a ...interface{}) {
-	log_func(DEBUG, format, a...)
+	logFunc(DebugLevel, format, a...)
 }
 
 func Info(format string, a ...interface{}) {
-	log_func(INFO, format, a...)
+	logFunc(InfoLevel, format, a...)
 }
 
 func Warning(format string, a ...interface{}) {
-	log_func(WARNING, format, a...)
+	logFunc(WarningLevel, format, a...)
 }
 
 func Error(format string, a ...interface{}) {
-	log_func(ERROR, format, a...)
+	logFunc(ErrorLevel, format, a...)
 }
 
 func ErrorOnce(format string, a ...interface{}) {
-	log_func(ERROR_ONCE, format, a...)
+	logFunc(ErrorOnceLevel, format, a...)
+}
+
+func Panic(format string, a ...interface{}) {
+	m := logMsg{Level: PanicLevel, Time: time.Now(), Msg: fmt.Sprintf(format, a...)}
+	if enabledFileLine {
+		_, f, l, _ := runtime.Caller(2)
+		m.File = f
+		m.Line = l
+	}
+	logWriter(&m)
+	panic(logWriter(&m))
 }
