@@ -105,9 +105,9 @@ func logWorker() {
 				continue
 			}
 
-			if fi.Size() > int64(maxLogSize) {
+			if nLogs != 0 && fi.Size() > int64(maxLogSize) {
 				logFile.Close()
-				os.Rename(logFileName, logFileName+"."+strconv.Itoa(currentLogIndex))
+				os.Rename(logFileName, logFileName+"."+strconv.FormatUint(currentLogIndex, 10))
 				currentLogIndex++
 				if currentLogIndex > nLogs {
 					currentLogIndex = 1
@@ -145,15 +145,15 @@ var logFile *os.File
 var logFileName string
 var minLogLevel logMode
 
-var maxLogSize int
-var nLogs int
-var currentLogIndex int
+var maxLogSize uint64
+var nLogs uint64
+var currentLogIndex uint64
 
 var enabledFileLine bool
 var printToStdOut bool
 var bufferedLogging bool
 
-func Init(fileName string, minLevel logMode, maxSize int, n int, flags Flags) {
+func Init(fileName string, minLevel logMode, maxSize uint64, n uint64, flags Flags) {
 	enabledFileLine = (flags & ShowFileLine) != 0
 	printToStdOut = (flags & PrintToStdout) != 0
 	bufferedLogging = (flags & BufferedLogging) != 0
@@ -174,7 +174,7 @@ func Init(fileName string, minLevel logMode, maxSize int, n int, flags Flags) {
 	minLogLevel = minLevel
 	maxLogSize = maxSize
 	nLogs = n
-	currentLogIndex = 1
+	currentLogIndex = uint64(1)
 
 	go logWorker()
 }
